@@ -1,6 +1,5 @@
 const { spawn } = require('child_process');
 // const fs = require('fs');
-// const exec = require('child_process').exec;
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 
@@ -20,17 +19,13 @@ function doSomething(err, res) {
   const bash = spawn('bash', [path.join(__dirname, '/bash/close_iMessages.sh')]);
   // find the current user logged in to add to the "find" path.
   const stat = spawn('stat', ['-f', '%Su', '/dev/console']);
-  const err = new Error();
-  let res;
-
+  
   // bash
   bash.stdout.on('data', (data) => {
-    res = data;
     console.log(`Stdout: ${data}`);
   })
 
   bash.stderr.on('data', (data) => {
-    err = data;
     console.log(`stderr: ${data}`);
   })
 
@@ -40,7 +35,7 @@ function doSomething(err, res) {
     }
 
     if (cb) {
-      cb(err, res);
+      // cb(err, res);
     }
 
   });
@@ -49,9 +44,22 @@ function doSomething(err, res) {
   stat.stdout.on('data', (data) => {
     const find = spawn('find', [(`/Users/${data.toString().trim()}/Library/Messages/`), '-name', "chat.db", '-type', 'f'], {});
 
-    // find depends on stat
     find.stdout.on('data', (data) => {
-      console.log('find: ', data.toString());
+
+      const db = new sqlite3.Database(data.toString().trim(), sqlite3.OPEN_READWRITE, (err) => {
+        if (err) {
+          return console.error(err.message);
+        }
+        console.log("Connected to SQlite3 DB.");
+      });
+      
+      db.close((err) => {
+        if(err) {
+          return console.err(err.message);
+        }
+        console.log("Closed the SQliet3 DB connection.");
+      });
+
     });
 
     find.stderr.on('data', (data) => {
