@@ -20,7 +20,7 @@ const sqlite3 = require('sqlite3').verbose();
   const bash = spawn('bash', [path.join(__dirname, '/bash/close_iMessages.sh')]);
   // find the current user logged in to add to the "find" path.
   const stat = spawn('stat', ['-f', '%Su', '/dev/console']);
-  
+
   // bash
   bash.stdout.on('data', (data) => {
     console.log(`Stdout: ${data}`);
@@ -46,14 +46,17 @@ const sqlite3 = require('sqlite3').verbose();
     const find = spawn('find', [(`/Users/${data.toString().trim()}/Library/Messages/`), '-name', "chat.db", '-type', 'f'], {});
 
     find.stdout.on('data', (data) => {
-      const tables = getTables(data);
+      const tables = getTables(data)
+        .then((data) => {
+          console.log(data);
+        });
       // const db = new sqlite3.Database(data.toString().trim(), sqlite3.OPEN_READWRITE, (err) => {
       //   if (err) {
       //     return console.error(err.message);
       //   }
       //   console.log('Connected to SQlite3 DB.');
       // });
-      
+
       // const sql = 'SELECT * FROM DB';
 
       // db.all(sql,[], (err, rows) => {
@@ -103,18 +106,19 @@ const sqlite3 = require('sqlite3').verbose();
 
 function getTables(dbPath) {
   return new Promise((resolve, reject) => {
-    const sqlite3 = spawn('sqlite3', [dbPath, '.tables'], {});
+    const bash = spawn('bash', [path.join(__dirname, '/bash/capture_table_names.sh'), dbPath], {});
 
-    sqlite3.stdout.on('data', (data) => {
-      console.log(data.toString().trim(), 'STDOUT');
+    bash.stdout.on('data', (data) => {
+      resolve(data.toString().trim());
     });
 
-    sqlite3.stderr.on('data', (data) => {
+    bash.stderr.on('data', (data) => {
       console.log(data.toString().trim());
+      reject(data.toString().trim());
     });
 
-    sqlite3.on('close', (code) => {
-      console.log('sqlite3: ', `Child process exited with code ${code}`);
+    bash.on('close', (code) => {
+      console.log(`Child process exited with code ${code}`);
     })
   });
 }
