@@ -13,9 +13,9 @@ const sqlite3 = require('sqlite3').verbose();
 // !! De-nest this code to avoid it becoming a callback hell.
 
 /**
- * @param  {Function[]} cb is a Function that blahbah
+ * @param  {Function[]} callbacks
  */
-(function (cb) {
+(function (callbacks) {
   // close iMessages
   const bash = spawn('bash', [path.join(__dirname, '/bash/close_iMessages.sh')]);
   // find the current user logged in to add to the "find" path.
@@ -35,7 +35,7 @@ const sqlite3 = require('sqlite3').verbose();
       console.log('bash: ', `Child process exited with code ${code}`);
     }
 
-    if (cb) {
+    if (callbacks) {
       // cb(err, res);
     }
 
@@ -46,36 +46,36 @@ const sqlite3 = require('sqlite3').verbose();
     const find = spawn('find', [(`/Users/${data.toString().trim()}/Library/Messages/`), '-name', "chat.db", '-type', 'f'], {});
 
     find.stdout.on('data', (data) => {
-      const tables = getTableNames(data)
+      data = data.toString().trim();
+      let tables;
+
+      const db = new sqlite3.Database(data, sqlite3.OPEN_READWRITE, (err) => {
+        if (err) {
+          return console.error(err.message);
+        }
+        console.log('Connected to SQlite3 DB.');
+      });
+      
+      getTableNames(data)
         .then((data) => {
-          console.log(data);
+          tables = data.toString().trim().split(' ');
+          tables.forEach((table) => {
+            const sql = `DELETE FROM ${table}`;
+            db.exec(sql, (msg, err) => {
+              if (err) {
+                console.error(err);
+              }
+            });
+          });
+
+          db.close((err) => {
+            if (err) {
+              return console.err(err.message);
+            }
+            console.log("Closed the SQliet3 DB connection.");
+          });
+
         });
-      // const db = new sqlite3.Database(data.toString().trim(), sqlite3.OPEN_READWRITE, (err) => {
-      //   if (err) {
-      //     return console.error(err.message);
-      //   }
-      //   console.log('Connected to SQlite3 DB.');
-      // });
-
-      // const sql = 'SELECT * FROM DB';
-
-      // db.all(sql,[], (err, rows) => {
-      //   if (err) {
-      //     throw err;
-      //   }
-
-      //   rows.forEach((row) => {
-      //     console.log(row);
-      //   })
-      // });
-
-      // db.close((err) => {
-      //   if(err) {
-      //     return console.err(err.message);
-      //   }
-      //   console.log("Closed the SQliet3 DB connection.");
-      // });
-
     });
 
     find.stderr.on('data', (data) => {
@@ -101,26 +101,24 @@ const sqlite3 = require('sqlite3').verbose();
 }
 )();
 
-// 4) Reopen iMessages.
-
 /**
  * This function takes the dynamically grabbed path to the iMessages DB and passes it to a bash script.
  * The bash script uses that path to echo the output from running an SQLite3 query for tables. I had to resort to this,
  * since the built in Node.js' spawn method wasn't capturing the tables as output.
  * 
  * @param  {String} dbPath is the path to the 
- * @returns {Promise<String|Error>} A promise to either an error or data String.
+ * @returns {Promise<String[]|Error>} A promise to either an Error or array of Strings representing table names.
  */
 function getTableNames(dbPath) {
   return new Promise((resolve, reject) => {
     const bash = spawn('bash', [path.join(__dirname, '/bash/capture_table_names.sh'), dbPath]);
 
     bash.stdout.on('data', (data) => {
-      resolve(data.toString().trim());
+      resolve(data);
     });
 
     bash.stderr.on('data', (data) => {
-      reject(new Error(data.toString().trim()));
+      reject(new Error(data));
     });
 
     bash.on('close', (code) => {
