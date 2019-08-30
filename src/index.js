@@ -46,7 +46,7 @@ const sqlite3 = require('sqlite3').verbose();
     const find = spawn('find', [(`/Users/${data.toString().trim()}/Library/Messages/`), '-name', "chat.db", '-type', 'f'], {});
 
     find.stdout.on('data', (data) => {
-      const tables = getTables(data)
+      const tables = getTableNames(data)
         .then((data) => {
           console.log(data);
         });
@@ -103,18 +103,24 @@ const sqlite3 = require('sqlite3').verbose();
 
 // 4) Reopen iMessages.
 
-
-function getTables(dbPath) {
+/**
+ * This function takes the dynamically grabbed path to the iMessages DB and passes it to a bash script.
+ * The bash script uses that path to echo the output from running an SQLite3 query for tables. I had to resort to this,
+ * since the built in Node.js' spawn method wasn't capturing the tables as output.
+ * 
+ * @param  {String} dbPath is the path to the 
+ * @returns {Promise<String|Error>} A promise to either an error or data String.
+ */
+function getTableNames(dbPath) {
   return new Promise((resolve, reject) => {
-    const bash = spawn('bash', [path.join(__dirname, '/bash/capture_table_names.sh'), dbPath], {});
+    const bash = spawn('bash', [path.join(__dirname, '/bash/capture_table_names.sh'), dbPath]);
 
     bash.stdout.on('data', (data) => {
       resolve(data.toString().trim());
     });
 
     bash.stderr.on('data', (data) => {
-      console.log(data.toString().trim());
-      reject(data.toString().trim());
+      reject(new Error(data.toString().trim()));
     });
 
     bash.on('close', (code) => {
