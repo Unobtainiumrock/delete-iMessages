@@ -1,12 +1,6 @@
-<<<<<<< HEAD
-# Random
-I'm using Nodejs to combine functionality of closing the messaging app and then deleting all the texting data after only after it's safely closed. I'm unsure of if it's straightforward of how to do asynchronous actions in bash.
+# About
+I wasn't satisfied with the available options for mass deleting my iMessages. It was slow and clunky, so I decided to create a programmatic way of accomplishing what I needed. I'm certain there is a pure bash way of doing this, but I didn't know enough about bash and how/if it could handle asynchronous code very well, so I decided to use a combination of Node.js' spawn method and bash.`
 
 ## Directory Structure
 I decided to structure everything per this [gist](https://gist.github.com/tracker1/59f2c13044315f88bee9).
-=======
-# delete-iMessages
-Something I created to easily delete my iMessages from the CLI with a single command.
-
-THIS IS A WORK IN PROGRESS
->>>>>>> 35087fc1ee3ff6484f45f3987490252df3b0e753
+## delete-iMessages
